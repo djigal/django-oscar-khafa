@@ -12,7 +12,7 @@ DEBUG = env.bool('DEBUG', default=True)
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1'])
 
-EMAIL_SUBJECT_PREFIX = '[Oscar sandbox] '
+EMAIL_SUBJECT_PREFIX = os.environ.get('EMAIL_SUBJECT_PREFIX', '[Oscar sandbox] ')   
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # Use a Sqlite database by default
@@ -39,13 +39,13 @@ CACHES = {
 # On Unix systems, a value of None will cause Django to use the same
 # timezone as the operating system.
 USE_TZ = True
-TIME_ZONE = 'Europe/London'
+TIME_ZONE = os.environ.get('TIME_ZONE', 'Europe/London')    
 
 TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 
 # Language code for this installation. All choices can be found here:
 # http://www.i18nguy.com/unicode/language-identifiers.html
-LANGUAGE_CODE = 'en-gb'
+LANGUAGE_CODE = os.environ.get('LANGUAGE_CODE', 'en-gb')
 
 # Includes all languages that have >50% coverage in Transifex
 # Taken from Django's default setting for LANGUAGES
@@ -375,7 +375,7 @@ from oscar.defaults import *
 # Meta
 # ====
 
-OSCAR_SHOP_TAGLINE = 'Sandbox'
+OSCAR_SHOP_TAGLINE = os.environ.get('OSCAR_SHOP_TAGLINE', 'Sandbox')
 
 OSCAR_RECENTLY_VIEWED_PRODUCTS = 20
 OSCAR_ALLOW_ANON_CHECKOUT = True
@@ -410,7 +410,7 @@ OSCAR_ORDER_STATUS_CASCADE = {
 # ====
 
 THUMBNAIL_DEBUG = DEBUG
-THUMBNAIL_KEY_PREFIX = 'oscar-sandbox'
+THUMBNAIL_KEY_PREFIX = os.environ.get('THUMBNAIL_KEY_PREFIX', 'oscar-sandbox')
 THUMBNAIL_KVSTORE = env(
     'THUMBNAIL_KVSTORE',
     default='sorl.thumbnail.kvstores.cached_db_kvstore.KVStore')

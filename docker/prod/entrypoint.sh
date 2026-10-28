@@ -7,6 +7,12 @@ if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
     python manage.py migrate --noinput
 fi
 
+if [ ! -w public/media ]; then
+    echo "ERROR: public/media is not writable by uid $(id -u)." >&2
+    echo "On the host, run: sudo chown -R $(id -u):$(id -g) <MEDIA_DIR>" >&2
+    exit 1
+fi
+
 if [ ! -f public/media/image_not_found.jpg ]; then
     python -c "import oscar, os, shutil; shutil.copy(os.path.join(os.path.dirname(oscar.__file__), 'static/oscar/img/image_not_found.jpg'), 'public/media/')"
 fi
