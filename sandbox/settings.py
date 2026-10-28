@@ -376,6 +376,7 @@ from oscar.defaults import *
 # ====
 
 OSCAR_SHOP_TAGLINE = os.environ.get('OSCAR_SHOP_TAGLINE', 'Sandbox')
+OSCAR_DEFAULT_CURRENCY = os.environ.get('OSCAR_DEFAULT_CURRENCY', 'GBP')
 
 OSCAR_RECENTLY_VIEWED_PRODUCTS = 20
 OSCAR_ALLOW_ANON_CHECKOUT = True
