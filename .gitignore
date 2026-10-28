@@ -29,14 +29,16 @@ __pycache__
 .pydevproject
 .settings
 .idea
-.vscode
 
 # Docs
 /docs/build/*
 /src/oscar/static/
 *.pdf
+
 TODO
 venv
+.venv/
+volumes/
 
 # Test files
 .coverage

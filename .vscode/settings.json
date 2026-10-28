@@ -1,0 +1,30 @@
+{
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+    "python.envFile": "${workspaceFolder}/.vscode/.env.test",
+    "python.testing.cwd": "${workspaceFolder}",
+    "python.experiments.optOutFrom": [],
+    "python.testing.pytestArgs": [],
+    "python.testing.unittestEnabled": true,
+    "python.testing.pytestEnabled": false,
+    "debugpy.debugJustMyCode": false,
+    "python.testing.unittestArgs": [
+        // "-v",
+        // "-s",
+        "-p",
+        "test_*.py"
+    ],
+    "files.readonlyInclude": {
+        "**/.venv/**/*": true
+    },
+    "files.exclude": {
+        "**/__pycache__": true,
+        "**/*.pyc": true
+    },
+    "python-envs.pythonProjects": [
+        {
+            "path": ".",
+            "envManager": "ms-python.python:venv",
+            "packageManager": "ms-python.python:pip"
+        }
+    ]
+}

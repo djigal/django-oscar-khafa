@@ -1,0 +1,71 @@
+services:
+  django-oscar:
+    image: django_oscar
+    build:
+      context: .
+      dockerfile: ./.devcontainer/Dockerfile
+    command: >
+      bash -c "cd /app && sleep infinity"
+    # command: ["sh", "-c", "pip install debugpy -t /tmp && python /tmp/debugpy --wait-for-client --listen 0.0.0.0:5678 manage.py runserver 0.0.0.0:8000 --nothreading --noreload"]
+    # ports:
+    #  - 12000:8000
+
+    volumes:
+      # Update this to wherever you want VS Code to mount the folder of your project
+      - .:/app
+      - ~/projects/perso:/workspaces
+      - ~/.pypirc:/root/.pypirc:ro
+      - ~/.pip:/root/.pip:ro
+
+    environment:
+      WORKDIR: /app
+      # Read by tests/settings.py so plain `pytest` uses the Postgres service below.
+      DATABASE_NAME: django_oscar
+      DATABASE_USER: django_oscar
+      DATABASE_PASSWORD: django_oscar
+      DATABASE_HOST: django-oscar-db
+      DATABASE_PORT: 5432
+
+    networks:
+        - oscar
+
+  django-oscar-db:
+    image: postgres:17.7
+    # ports:
+        # - 5432:5432
+        # - 5434:5432
+    environment:
+        POSTGRES_DB: django_oscar
+        POSTGRES_USER: django_oscar
+        POSTGRES_PASSWORD: django_oscar
+    volumes:
+        - ./volumes/django-oscar-postgresql-db:/var/lib/postgresql/data
+    networks:
+        - oscar
+
+  django-oscar-rabbitmq:
+    image: rabbitmq:3-management # Uses the official RabbitMQ image with management plugin
+   # hostname: rabbitmq # Assigns a hostname to the container
+   # ports:
+     # - "5672:5672" # AMQP protocol port
+     # - "15672:15672" # Management UI port
+    environment:
+      RABBITMQ_DEFAULT_USER: django_oscar # Default username (change for production)
+      RABBITMQ_DEFAULT_PASS: django_oscar # Default password (change for production)
+    volumes:
+      # - billpaygateway-rabbitmq_data:/var/lib/rabbitmq # Persist RabbitMQ data
+      - ./volumes/django-oscar-rabbitmq_data:/var/lib/rabbitmq # Persist RabbitMQ data
+    networks:
+       - oscar
+
+  # Channel layer of the WebSockets (ws/payment-request/<identifier>/): shared by
+  # the ASGI server and the Celery workers that change payment request statuses.
+  django-oscar-redis:
+    image: redis:7-alpine
+    networks:
+      - oscar
+
+networks:
+  oscar:
+    external:
+      true

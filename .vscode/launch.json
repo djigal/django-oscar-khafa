@@ -1,0 +1,152 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python Debugger: Django",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                "runserver",
+                "0.0.0.0:8000"
+            ],
+            "django": true,
+            "autoStartBrowser": false,
+            "program": "${workspaceFolder}/sandbox/manage.py",
+            "consoleName": "Django server"
+        }, /*
+        {
+            "name": "Celery: default queue",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                "-A",
+                "billpayregistry",
+                "worker",
+                "-Q",
+                "celery",
+                "-l",
+                "info",
+                "-c",
+                "1"
+            ],
+            "django": true,
+            "autoStartBrowser": false,
+            "module": "celery",
+            "consoleName": "Celery default queue"
+        },
+        {
+            "name": "Celery: Beat",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                "-A",
+                "billpayregistry",
+                "beat",
+                "-l",
+                "info",
+                "--scheduler",
+                "django_celery_beat.schedulers:DatabaseScheduler"
+            ],
+            "django": true,
+            "autoStartBrowser": false,
+            "module": "celery",
+            "consoleName": "Celery Beat"
+        },*/
+        {
+            "name": "Python Debugger: Django (OpenTelemetry)",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                "runserver",
+                "0.0.0.0:8000",
+                "--noreload"
+            ],
+            "django": true,
+            "autoStartBrowser": false,
+            "program": "${workspaceFolder}/sandbox/manage.py",
+            "consoleName": "Django server (OTel)",
+            "env": {
+                "OPEN_TELEMETRY_ACTIVATED": "True",
+                // Équivalent de `opentelemetry-instrument` : ce dossier contient le
+                // sitecustomize.py qui charge l'auto-instrumentation au démarrage.
+                "PYTHONPATH": "${workspaceFolder}/.venv/lib/python3.14/site-packages/opentelemetry/instrumentation/auto_instrumentation:${env:PYTHONPATH}",
+                // docker-compose.override.yml pointe vers http://otel-collector (résolu uniquement
+                // dans le réseau Docker). En local, on cible le port gRPC exposé sur l'hôte.
+                // Ajuster le port si le collector du docker-compose publie autre chose que 4317.
+                "OTEL_EXPORTER_OTLP_ENDPOINT": "http://billpayregistry-otel-collector:4317",
+                "OTEL_SERVICE_NAME": "billpayregistry",
+                "OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
+                // "logging" est aussi désactivé côté auto-instrumentation : sinon LoggingInstrumentor
+                // s'active une première fois avec set_logging_format=False (pas d'otelTraceID injecté),
+                // et l'appel explicite dans setup_opentelemetry() (set_logging_format=True) est ignoré
+                // car OTel refuse d'instrumenter deux fois — ce qui casse le formatter "otel" (KeyError
+                // otelTraceID) sur les logs d'accès de django.server.
+                "OTEL_PYTHON_DISABLED_INSTRUMENTATIONS": "django,logging"
+            }
+        },
+        {
+            "name": "Make migration",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                "makemigrations"
+            ],
+            "django": true,
+            "autoStartBrowser": false,
+            "program": "${workspaceFolder}/sandbox/manage.py",
+            "consoleName": "Make migration"
+        },
+        {
+            "name": "Make empty migration",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                "makemigrations",
+                "billpayregistryapi",
+                "--empty"
+            ],
+            "django": true,
+            "autoStartBrowser": false,
+            "program": "${workspaceFolder}/sandbox/manage.py",
+            "consoleName": "Make migration"
+        },
+        {
+            "name": "Migrate",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                "migrate"
+            ],
+            "django": true,
+            "autoStartBrowser": false,
+            "program": "${workspaceFolder}/sandbox/manage.py",
+            "consoleName": "Migrate"
+        },
+        {
+            "name": "Migrate zero",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                "migrate",
+                "billpayregistryapi",
+                "zero"
+            ],
+            "django": true,
+            "autoStartBrowser": false,
+            "program": "${workspaceFolder}/sandbox/manage.py",
+            "consoleName": "Migrate zero"
+        },
+        {
+            "name": "Create super user",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                "createsuperuser"
+            ],
+            "django": true,
+            "autoStartBrowser": false,
+            "program": "${workspaceFolder}/sandbox/manage.py",
+            "consoleName": "Create super user"
+        },
+    ]
+}
