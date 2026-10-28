@@ -59,10 +59,10 @@ RUN SECRET_KEY=build ALLOWED_HOSTS=localhost \
     DATABASE_NAME=build DATABASE_USER=build DATABASE_PASSWORD=build \
     python manage.py collectstatic --noinput
 
-EXPOSE 8000
+EXPOSE 8080
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["gunicorn", "wsgi:application", \
-     "--bind", "0.0.0.0:8000", \
+     "--bind", "0.0.0.0:8080", \
      "--workers", "3", \
      "--timeout", "30", \
      "--access-logfile", "-"]
