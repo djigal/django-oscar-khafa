@@ -62,3 +62,6 @@ settings_local.py
 
 # test stuff
 /tests/whoosh_index/
+
+# Production secrets
+.env.prod

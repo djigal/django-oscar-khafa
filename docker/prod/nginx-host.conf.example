@@ -1,0 +1,37 @@
+# Site config for the nginx installed on the production host, e.g.
+# /etc/nginx/sites-available/oscar (then symlink into sites-enabled and reload).
+# Adjust server_name, certificate paths, the port (WEB_PORT) and the media path (MEDIA_DIR).
+
+server {
+    listen 80;
+    server_name shop.example.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name shop.example.com;
+
+    ssl_certificate     /etc/letsencrypt/live/shop.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/shop.example.com/privkey.pem;
+
+    client_max_body_size 20M;
+
+    # Uploaded media (product images, thumbnails), bind-mounted from the web container.
+    location /media/ {
+        alias /srv/oscar/media/;
+        expires 30d;
+        access_log off;
+    }
+
+    # Everything else, including /static/ (served by whitenoise).
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 60s;
+    }
+}

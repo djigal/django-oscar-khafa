@@ -1,0 +1,57 @@
+# Production stack for the Oscar sandbox: gunicorn (web) -> PostgreSQL.
+#
+# HTTPS and /media/ are handled by the nginx already installed on the host, which
+# proxies to 127.0.0.1:${WEB_PORT} (see docker/prod/nginx-host.conf.example).
+# The media directory must exist on the host and belong to uid 10001:
+#   sudo mkdir -p /srv/oscar/media && sudo chown 10001:10001 /srv/oscar/media
+#
+#   cp .env.prod.example .env.prod   # then fill in the secrets
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod build
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+#
+# Migrations run automatically when the web container starts (docker/prod/entrypoint.sh).
+
+services:
+  web:
+    image: ${IMAGE_NAME:-django-oscar-sandbox}:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: docker/prod/Dockerfile
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      DATABASE_HOST: db
+      DATABASE_PORT: 5432
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8000}:8000"
+    volumes:
+      - ${MEDIA_DIR:-/srv/oscar/media}:/app/sandbox/public/media
+      - search_index:/app/sandbox/whoosh_index
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('localhost', 8000), timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  db:
+    image: postgres:17.7
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME}
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  search_index:
