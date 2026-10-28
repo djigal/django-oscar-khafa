@@ -38,7 +38,7 @@ services:
       start_period: 60s
 
   db:
-    image: postgres:17.7
+    image: postgres:17-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DATABASE_NAME}
