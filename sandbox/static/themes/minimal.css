@@ -1,0 +1,32 @@
+/* Minimal – noir & blanc */
+:root {
+    --bg: #FFFFFF;
+    --surface: #FFFFFF;
+    --surface-alt: #F6F6F6;
+    --border: #E5E5E5;
+    --text: #111111;
+    --heading: #000000;
+    --muted: #777777;
+    --link: #111111;
+    --link-hover: #555555;
+    --brand: #000000;
+    --primary: #111111;
+    --primary-hover: #333333;
+    --on-primary: #FFFFFF;
+    --accent: #111111;
+    --price: #111111;
+    --focus-ring: rgba(0, 0, 0, .2);
+    --nav-bg: #FFFFFF;
+    --nav-text: #111111;
+    --topbar-bg: #FFFFFF;
+    --topbar-text: #111111;
+    --radius: 0;
+    --shadow: 0 0 0 1px #111111;
+    --font-body: 'DM Sans', sans-serif;
+    --font-heading: 'DM Serif Display', serif;
+}
+
+/* White main nav needs a border and dark toggler */
+.navbar.bg-dark { border-top: 1px solid #111; border-bottom: 1px solid #111; }
+.navbar.bg-dark .navbar-toggler-icon { filter: invert(1); }
+.navbar.bg-dark .nav-link { text-transform: uppercase; letter-spacing: .08em; font-size: .85rem; }

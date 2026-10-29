@@ -1,0 +1,106 @@
+/*
+ * Shared rules for every theme: maps Oscar/Bootstrap 4 components onto the
+ * variables each theme file defines on :root.
+ */
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+}
+
+h1, h2, h3, h4, .h1, .h2, .h3, .h4, .page-header h1 {
+    font-family: var(--font-heading);
+    color: var(--heading);
+}
+
+a { color: var(--link); }
+a:hover { color: var(--link-hover); }
+
+.text-muted, .header small { color: var(--muted) !important; }
+
+/* Header */
+#top_page.bg-light {
+    background: var(--topbar-bg) !important;
+}
+#top_page .nav-link, #top_page .navbar-text { color: var(--topbar-text) !important; }
+
+.header .h1 a { color: var(--brand); text-decoration: none; }
+
+.navbar.bg-dark {
+    background: var(--nav-bg) !important;
+    border-radius: var(--radius);
+}
+.navbar.bg-dark .nav-link { color: var(--nav-text) !important; }
+.navbar.bg-dark .nav-link:hover { color: var(--accent) !important; }
+
+/* Buttons */
+.btn { border-radius: var(--radius); }
+.btn-primary, .btn-success {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--on-primary);
+}
+.btn-primary:hover, .btn-primary:focus, .btn-primary:active,
+.btn-success:hover, .btn-success:focus, .btn-success:active {
+    background: var(--primary-hover) !important;
+    border-color: var(--primary-hover) !important;
+    color: var(--on-primary);
+}
+.btn-secondary, .btn-info {
+    background: transparent;
+    border-color: var(--primary);
+    color: var(--primary);
+}
+.btn-secondary:hover, .btn-info:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--on-primary);
+}
+.btn:focus, .form-control:focus, .custom-select:focus {
+    box-shadow: 0 0 0 .2rem var(--focus-ring);
+}
+
+/* Cards, panels, forms */
+.card, .list-group-item, .modal-content, .dropdown-menu, .table, .well,
+.form-control, .custom-select {
+    background-color: var(--surface);
+    color: var(--text);
+    border-color: var(--border);
+}
+.card, .form-control, .custom-select, .dropdown-menu, .alert, .img-thumbnail {
+    border-radius: var(--radius);
+}
+.dropdown-item { color: var(--text); }
+.dropdown-item:hover { background: var(--surface-alt); color: var(--primary); }
+.breadcrumb, .form-actions, .bg-light { background-color: var(--surface-alt) !important; }
+
+/* Products */
+.product_pod {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: .75rem;
+    transition: box-shadow .2s, transform .2s;
+}
+.product_pod:hover {
+    box-shadow: var(--shadow);
+    transform: translateY(-2px);
+}
+.price_color { color: var(--price) !important; font-weight: 700; }
+.star-rating { color: var(--accent); }
+
+.page-item.active .page-link { background: var(--primary); border-color: var(--primary); }
+.page-link { color: var(--link); background: var(--surface); border-color: var(--border); }
+
+footer.footer { color: var(--muted); }
+
+/* Theme preview switcher (staff / DEBUG only) */
+.theme-switcher {
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    z-index: 1050;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, .2);
+    border-radius: .25rem;
+}

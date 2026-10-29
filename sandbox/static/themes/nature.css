@@ -1,0 +1,27 @@
+/* Nature – vert frais */
+:root {
+    --bg: #F4F9F1;
+    --surface: #FFFFFF;
+    --surface-alt: #E7F2E1;
+    --border: #CFE3C5;
+    --text: #23361F;
+    --heading: #1B5E20;
+    --muted: #6A8063;
+    --link: #2E7D32;
+    --link-hover: #1B5E20;
+    --brand: #2E7D32;
+    --primary: #2E7D32;
+    --primary-hover: #1B5E20;
+    --on-primary: #FFFFFF;
+    --accent: #F9A825;
+    --price: #2E7D32;
+    --focus-ring: rgba(46, 125, 50, .3);
+    --nav-bg: #2E7D32;
+    --nav-text: #F1F8E9;
+    --topbar-bg: #E7F2E1;
+    --topbar-text: #23361F;
+    --radius: 14px;
+    --shadow: 0 8px 20px rgba(46, 125, 50, .15);
+    --font-body: 'Nunito', sans-serif;
+    --font-heading: 'Nunito', sans-serif;
+}

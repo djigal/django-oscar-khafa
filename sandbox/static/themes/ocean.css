@@ -1,0 +1,27 @@
+/* Océan – bleu moderne */
+:root {
+    --bg: #F5F8FC;
+    --surface: #FFFFFF;
+    --surface-alt: #EAF1FA;
+    --border: #D6E2F0;
+    --text: #1F2D3D;
+    --heading: #0A2540;
+    --muted: #6B7C93;
+    --link: #0B63CE;
+    --link-hover: #084C9E;
+    --brand: #0A2540;
+    --primary: #0B63CE;
+    --primary-hover: #084C9E;
+    --on-primary: #FFFFFF;
+    --accent: #14B8A6;
+    --price: #0B63CE;
+    --focus-ring: rgba(11, 99, 206, .3);
+    --nav-bg: #0A2540;
+    --nav-text: #DCE7F5;
+    --topbar-bg: #FFFFFF;
+    --topbar-text: #0A2540;
+    --radius: 8px;
+    --shadow: 0 8px 24px rgba(10, 37, 64, .12);
+    --font-body: 'Inter', sans-serif;
+    --font-heading: 'Inter', sans-serif;
+}

@@ -1,0 +1,36 @@
+/* Nuit – sombre & doré */
+:root {
+    --bg: #121212;
+    --surface: #1E1E1E;
+    --surface-alt: #262626;
+    --border: #333333;
+    --text: #E6E6E6;
+    --heading: #FFFFFF;
+    --muted: #9E9E9E;
+    --link: #D4AF37;
+    --link-hover: #F0CD5C;
+    --brand: #D4AF37;
+    --primary: #D4AF37;
+    --primary-hover: #B8962B;
+    --on-primary: #121212;
+    --accent: #D4AF37;
+    --price: #F0CD5C;
+    --focus-ring: rgba(212, 175, 55, .35);
+    --nav-bg: #000000;
+    --nav-text: #E6E6E6;
+    --topbar-bg: #1A1A1A;
+    --topbar-text: #CCCCCC;
+    --radius: 6px;
+    --shadow: 0 8px 24px rgba(0, 0, 0, .6);
+    --font-body: 'Montserrat', sans-serif;
+    --font-heading: 'Cormorant Garamond', serif;
+}
+
+/* Dark-background fixes */
+.navbar-light .navbar-toggler-icon { filter: invert(1); }
+.table, .table td, .table th { color: var(--text); border-color: var(--border); }
+.table-striped tbody tr:nth-of-type(odd) { background: var(--surface-alt); }
+.form-control::placeholder { color: var(--muted); }
+.form-control:focus { background: var(--surface); color: var(--text); }
+.page-header, .sub-header { border-color: var(--border); }
+.close { color: var(--text); }

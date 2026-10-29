@@ -1,0 +1,28 @@
+{% extends "oscar/layout.html" %}
+{% load static %}
+
+{% block styles %}
+    {{ block.super }}
+    {% if theme_name != "default" %}
+        {% if theme.fonts %}
+            <link rel="preconnect" href="https://fonts.googleapis.com" />
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+            <link rel="stylesheet" href="https://fonts.googleapis.com/css2?{{ theme.fonts }}&display=swap" />
+        {% endif %}
+        <link rel="stylesheet" type="text/css" href="{% static "themes/"|add:theme_name|add:".css" %}" />
+        <link rel="stylesheet" type="text/css" href="{% static "themes/base.css" %}" />
+    {% endif %}
+{% endblock %}
+
+{% block layout %}
+    {{ block.super }}
+    {% if available_themes %}
+        <form method="get" class="theme-switcher" aria-label="Thème">
+            <select name="theme" class="custom-select custom-select-sm" onchange="this.form.submit()">
+                {% for key, t in available_themes.items %}
+                    <option value="{{ key }}"{% if key == theme_name %} selected{% endif %}>{{ t.label }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    {% endif %}
+{% endblock %}

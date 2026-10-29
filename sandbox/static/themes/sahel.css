@@ -1,0 +1,27 @@
+/* Sahel – terracotta & sable */
+:root {
+    --bg: #FBF6EE;
+    --surface: #FFFFFF;
+    --surface-alt: #F3E9DA;
+    --border: #E6D5BE;
+    --text: #3B2A20;
+    --heading: #2A1D15;
+    --muted: #8A7260;
+    --link: #A84A22;
+    --link-hover: #7E3517;
+    --brand: #C0582B;
+    --primary: #C0582B;
+    --primary-hover: #A84A22;
+    --on-primary: #FFFFFF;
+    --accent: #E0A33B;
+    --price: #A84A22;
+    --focus-ring: rgba(192, 88, 43, .3);
+    --nav-bg: #3B2A20;
+    --nav-text: #F3E9DA;
+    --topbar-bg: #F3E9DA;
+    --topbar-text: #3B2A20;
+    --radius: 10px;
+    --shadow: 0 6px 18px rgba(59, 42, 32, .12);
+    --font-body: 'Poppins', sans-serif;
+    --font-heading: 'Playfair Display', serif;
+}
