@@ -1,0 +1,14 @@
+{% extends "oscar/partials/footer.html" %}
+
+{% block footer %}
+    <nav class="legal-links" aria-label="Informations légales">
+        <ul class="list-inline">
+            <li class="list-inline-item"><a href="/mentions-legales/">Mentions légales</a></li>
+            <li class="list-inline-item"><a href="/cgv/">CGV</a></li>
+            <li class="list-inline-item"><a href="/confidentialite/">Confidentialité</a></li>
+            <li class="list-inline-item"><a href="/cookies/">Cookies</a></li>
+            <li class="list-inline-item"><a href="/livraison-retours/">Livraison &amp; retours</a></li>
+        </ul>
+        <p class="copyright">&copy; {% now "Y" %} {{ shop_name }}</p>
+    </nav>
+{% endblock %}

@@ -19,7 +19,7 @@ fi
 
 # Demo catalogue, only loaded into an empty database.
 if [ "${LOAD_SANDBOX_DATA:-false}" = "true" ] && \
-   [ "$(python manage.py shell -c 'from oscar.core.loading import get_model; print(get_model("catalogue", "Product").objects.exists())')" = "False" ]; then
+   [ "$(python manage.py shell -v 0 -c 'from oscar.core.loading import get_model; print(get_model("catalogue", "Product").objects.exists())')" = "False" ]; then
     echo "Loading sandbox demo data..."
     python manage.py loaddata fixtures/auth.json
     python manage.py loaddata fixtures/child_products.json
@@ -30,6 +30,13 @@ if [ "${LOAD_SANDBOX_DATA:-false}" = "true" ] && \
     python manage.py loaddata fixtures/orders.json
     python manage.py clear_index --noinput
     python manage.py update_index catalogue
+fi
+
+# Legal page templates (mentions légales, CGV, ...), loaded once; edit them
+# afterwards in Dashboard > Content > Pages.
+if [ "$(python manage.py shell -v 0 -c 'from django.contrib.flatpages.models import FlatPage; print(FlatPage.objects.filter(url="/mentions-legales/").exists())')" = "False" ]; then
+    echo "Loading legal pages..."
+    python manage.py loaddata fixtures/legal_pages.json
 fi
 
 exec "$@"

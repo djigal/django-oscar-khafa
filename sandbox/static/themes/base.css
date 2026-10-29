@@ -93,7 +93,15 @@ a:hover { color: var(--link-hover); }
 .page-item.active .page-link { background: var(--primary); border-color: var(--primary); }
 .page-link { color: var(--link); background: var(--surface); border-color: var(--border); }
 
-footer.footer { color: var(--muted); }
+body > footer {
+    margin-top: 2rem;
+    padding: 1.5rem 0;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    text-align: center;
+}
+body > footer .legal-links a { color: var(--muted); }
+body > footer .legal-links a:hover { color: var(--link-hover); }
 
 /* Theme preview switcher (staff / DEBUG only) */
 .theme-switcher {

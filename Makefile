@@ -53,7 +53,7 @@ sandbox_load_data: ## Import fixtures and collect static
 	sandbox/manage.py oscar_import_catalogue sandbox/fixtures/*.csv
 	sandbox/manage.py oscar_import_catalogue_images sandbox/fixtures/images.tar.gz
 	sandbox/manage.py oscar_populate_countries --initial-only
-	sandbox/manage.py loaddata sandbox/fixtures/pages.json sandbox/fixtures/ranges.json sandbox/fixtures/offers.json
+	sandbox/manage.py loaddata sandbox/fixtures/pages.json sandbox/fixtures/legal_pages.json sandbox/fixtures/ranges.json sandbox/fixtures/offers.json
 	sandbox/manage.py loaddata sandbox/fixtures/orders.json
 	sandbox/manage.py clear_index --noinput
 	sandbox/manage.py update_index catalogue

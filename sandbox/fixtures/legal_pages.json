@@ -1,0 +1,77 @@
+[
+    {
+        "model": "flatpages.flatpage",
+        "pk": 101,
+        "fields": {
+            "url": "/mentions-legales/",
+            "title": "Mentions légales",
+            "content": "<p><em>Conformément à l'article 6 de la loi n° 2004-575 du 21 juin 2004 pour la confiance dans l'économie numérique (LCEN).</em></p>\n\n<h2>Éditeur du site</h2>\n<ul>\n  <li>Raison sociale / nom : Khafa <mark>[à compléter]</mark></li>\n  <li>Forme juridique et capital social : <mark>[à compléter]</mark></li>\n  <li>Adresse du siège : <mark>[à compléter]</mark></li>\n  <li>SIRET / RCS : <mark>[à compléter]</mark></li>\n  <li>N° de TVA intracommunautaire : <mark>[à compléter]</mark></li>\n  <li>E-mail : ousmane.djigal@gmail.com</li>\n  <li>Téléphone : <mark>[à compléter]</mark></li>\n</ul>\n\n<h2>Directeur de la publication</h2>\n<p><mark>[à compléter]</mark></p>\n\n<h2>Hébergeur</h2>\n<p>Nom, adresse et téléphone de l'hébergeur du serveur : <mark>[à compléter]</mark></p>\n\n<h2>Propriété intellectuelle</h2>\n<p>L'ensemble des contenus de ce site (textes, images, logos, mise en page) est protégé par le droit de la propriété intellectuelle. Toute reproduction, même partielle, sans autorisation écrite préalable est interdite.</p>\n\n<h2>Responsabilité</h2>\n<p>L'éditeur s'efforce de fournir des informations exactes et à jour, mais ne saurait être tenu responsable des erreurs, omissions ou indisponibilités du site.</p>\n\n<h2>Données personnelles et cookies</h2>\n<p>Voir notre <a href=\"/confidentialite/\">politique de confidentialité</a> et notre <a href=\"/cookies/\">politique cookies</a>.</p>",
+            "enable_comments": false,
+            "template_name": "",
+            "registration_required": false,
+            "sites": [
+                1
+            ]
+        }
+    },
+    {
+        "model": "flatpages.flatpage",
+        "pk": 102,
+        "fields": {
+            "url": "/cgv/",
+            "title": "Conditions générales de vente",
+            "content": "<p><em>Dernière mise à jour : <mark>[à compléter]</mark></em></p>\n\n<h2>1. Objet</h2>\n<p>Les présentes conditions générales de vente (CGV) régissent les ventes conclues sur ce site entre Khafa (le « Vendeur », voir les <a href=\"/mentions-legales/\">mentions légales</a>) et toute personne physique agissant en qualité de consommateur (le « Client »). Toute commande implique l'acceptation sans réserve des présentes CGV.</p>\n\n<h2>2. Produits</h2>\n<p>Les caractéristiques essentielles des produits sont présentées sur chaque fiche produit. Les photographies ne sont pas contractuelles. Les produits sont expédiés directement par nos fournisseurs partenaires ; les offres sont valables dans la limite des stocks disponibles.</p>\n\n<h2>3. Prix</h2>\n<p>Les prix sont indiqués en euros, toutes taxes comprises (TTC), hors frais de livraison, qui sont précisés avant la validation de la commande. Le Vendeur se réserve le droit de modifier ses prix à tout moment ; le prix applicable est celui affiché au moment de la commande.</p>\n\n<h2>4. Commande</h2>\n<p>Le Client sélectionne les produits, vérifie le contenu de son panier, renseigne ses coordonnées, choisit le mode de livraison puis valide sa commande avec obligation de paiement. Un e-mail de confirmation récapitulant la commande lui est envoyé.</p>\n\n<h2>5. Paiement</h2>\n<p>Le paiement est exigible à la commande. Moyens de paiement acceptés : <mark>[à compléter]</mark>. Les paiements sont traités par un prestataire sécurisé ; le Vendeur n'a pas accès aux données bancaires du Client.</p>\n\n<h2>6. Livraison</h2>\n<p>Les produits sont livrés à l'adresse indiquée par le Client. Les délais et zones de livraison sont détaillés sur la page <a href=\"/livraison-retours/\">Livraison &amp; retours</a>. Conformément à l'article L216-1 du Code de la consommation, à défaut d'indication, la livraison intervient au plus tard 30 jours après la commande. En cas de retard, le Client peut résoudre le contrat dans les conditions des articles L216-6 et suivants.</p>\n\n<h2>7. Droit de rétractation</h2>\n<p>Conformément aux articles L221-18 et suivants du Code de la consommation, le Client dispose d'un délai de <strong>14 jours</strong> à compter de la réception du produit pour exercer son droit de rétractation, sans avoir à motiver sa décision. Il notifie sa décision par e-mail ou au moyen du formulaire type ci-dessous, puis renvoie le produit au plus tard 14 jours après cette notification. Le Vendeur rembourse toutes les sommes versées, y compris les frais de livraison initiaux (sur la base du mode standard), dans un délai de 14 jours à compter de la notification, ce remboursement pouvant être différé jusqu'à réception du produit ou de la preuve de son expédition. Les frais de retour sont à la charge du Client <mark>[à compléter]</mark>.</p>\n<p>Exceptions (article L221-28) : notamment les biens confectionnés selon les spécifications du Client, les biens susceptibles de se détériorer rapidement et les biens descellés ne pouvant être renvoyés pour des raisons d'hygiène.</p>\n<p><strong>Formulaire de rétractation</strong> (à renvoyer à ousmane.djigal@gmail.com) :<br>\n« Je vous notifie par la présente ma rétractation du contrat portant sur la vente du bien ci-dessous : commande n° …, reçue le …, nom du Client …, adresse …, date … »</p>\n\n<h2>8. Garanties légales</h2>\n<p>Tous les produits bénéficient de la garantie légale de conformité (articles L217-3 et suivants du Code de la consommation) pendant 2 ans à compter de la délivrance, et de la garantie des vices cachés (articles 1641 et suivants du Code civil). Pour toute réclamation, contactez-nous en précisant votre numéro de commande.</p>\n\n<h2>9. Responsabilité</h2>\n<p>Le Vendeur ne saurait être tenu responsable de l'inexécution du contrat en cas de force majeure ou du fait du Client.</p>\n\n<h2>10. Données personnelles</h2>\n<p>Voir notre <a href=\"/confidentialite/\">politique de confidentialité</a>.</p>\n\n<h2>11. Médiation et litiges</h2>\n<p>En cas de litige, le Client adresse d'abord une réclamation écrite au Vendeur. À défaut de solution amiable, il peut recourir gratuitement au médiateur de la consommation suivant (article L612-1) : <mark>[à compléter]</mark>. Les présentes CGV sont soumises au droit français.</p>",
+            "enable_comments": false,
+            "template_name": "",
+            "registration_required": false,
+            "sites": [
+                1
+            ]
+        }
+    },
+    {
+        "model": "flatpages.flatpage",
+        "pk": 103,
+        "fields": {
+            "url": "/confidentialite/",
+            "title": "Politique de confidentialité",
+            "content": "<p><em>Dernière mise à jour : <mark>[à compléter]</mark></em></p>\n\n<h2>Responsable du traitement</h2>\n<p>Khafa, voir les <a href=\"/mentions-legales/\">mentions légales</a>. Contact : ousmane.djigal@gmail.com</p>\n\n<h2>Données collectées</h2>\n<ul>\n  <li>Identité et coordonnées : nom, prénom, e-mail, téléphone, adresses de livraison et de facturation ;</li>\n  <li>Données de commande : produits achetés, montants, historique ;</li>\n  <li>Données de compte : identifiants (le mot de passe est stocké chiffré) ;</li>\n  <li>Données techniques : adresse IP, cookies (voir la <a href=\"/cookies/\">politique cookies</a>).</li>\n</ul>\n<p>Les données bancaires sont traitées directement par notre prestataire de paiement et ne sont pas conservées par nous.</p>\n\n<h2>Finalités et bases légales</h2>\n<ul>\n  <li>Traitement et livraison des commandes, service client : exécution du contrat ;</li>\n  <li>Facturation et comptabilité : obligation légale ;</li>\n  <li>Prévention de la fraude et sécurité du site : intérêt légitime ;</li>\n  <li>Newsletter et offres commerciales : consentement (désinscription possible à tout moment).</li>\n</ul>\n\n<h2>Destinataires</h2>\n<p>Vos données sont accessibles à nos équipes et transmises, pour le strict nécessaire, à nos fournisseurs et partenaires logistiques qui expédient les produits, aux transporteurs, au prestataire de paiement et à notre hébergeur. Liste des sous-traitants : <mark>[à compléter]</mark>. En cas de transfert hors de l'Union européenne, des garanties appropriées sont mises en place (clauses contractuelles types de la Commission européenne).</p>\n\n<h2>Durées de conservation</h2>\n<ul>\n  <li>Données clients : 3 ans après le dernier achat ou contact ;</li>\n  <li>Factures et pièces comptables : 10 ans ;</li>\n  <li>Cookies : 13 mois maximum.</li>\n</ul>\n\n<h2>Vos droits</h2>\n<p>Conformément au RGPD et à la loi Informatique et Libertés, vous disposez d'un droit d'accès, de rectification, d'effacement, de limitation, d'opposition et de portabilité de vos données, ainsi que du droit de définir des directives relatives à leur sort après votre décès. Pour les exercer, écrivez à ousmane.djigal@gmail.com. Vous pouvez également introduire une réclamation auprès de la CNIL (www.cnil.fr).</p>",
+            "enable_comments": false,
+            "template_name": "",
+            "registration_required": false,
+            "sites": [
+                1
+            ]
+        }
+    },
+    {
+        "model": "flatpages.flatpage",
+        "pk": 104,
+        "fields": {
+            "url": "/cookies/",
+            "title": "Politique cookies",
+            "content": "<h2>Qu'est-ce qu'un cookie ?</h2>\n<p>Un cookie est un petit fichier déposé sur votre terminal lors de la visite d'un site. Il permet notamment de mémoriser votre panier et votre session.</p>\n\n<h2>Cookies utilisés sur ce site</h2>\n<table class=\"table\">\n  <thead><tr><th>Cookie</th><th>Finalité</th><th>Durée</th><th>Consentement</th></tr></thead>\n  <tbody>\n    <tr><td>sessionid</td><td>Session et connexion au compte</td><td>2 semaines</td><td>Non requis (nécessaire)</td></tr>\n    <tr><td>csrftoken</td><td>Sécurité des formulaires</td><td>1 an</td><td>Non requis (nécessaire)</td></tr>\n    <tr><td>oscar_open_basket</td><td>Mémorisation du panier</td><td>7 jours</td><td>Non requis (nécessaire)</td></tr>\n    <tr><td>oscar_history</td><td>Produits récemment consultés</td><td>7 jours</td><td>Non requis (fonctionnel)</td></tr>\n    <tr><td>django_language</td><td>Langue choisie</td><td>Session / 1 an</td><td>Non requis (fonctionnel)</td></tr>\n  </tbody>\n</table>\n<p>Si des outils de mesure d'audience ou publicitaires sont ajoutés (par exemple Google Analytics), ils ne seront déposés qu'après votre consentement, recueilli via un bandeau. <mark>[à compléter]</mark></p>\n\n<h2>Gérer les cookies</h2>\n<p>Vous pouvez à tout moment supprimer ou bloquer les cookies depuis les réglages de votre navigateur. Le blocage des cookies nécessaires peut empêcher le fonctionnement du panier et de la commande.</p>",
+            "enable_comments": false,
+            "template_name": "",
+            "registration_required": false,
+            "sites": [
+                1
+            ]
+        }
+    },
+    {
+        "model": "flatpages.flatpage",
+        "pk": 105,
+        "fields": {
+            "url": "/livraison-retours/",
+            "title": "Livraison & retours",
+            "content": "<h2>Zones et délais de livraison</h2>\n<p>Nous livrons vers : <mark>[à compléter]</mark>. Les produits étant expédiés directement depuis les entrepôts de nos fournisseurs, les délais indicatifs sont les suivants :</p>\n<ul>\n  <li>Préparation de la commande : <mark>[à compléter]</mark> jours ouvrés ;</li>\n  <li>Acheminement : <mark>[à compléter]</mark> jours ouvrés ;</li>\n  <li>Une commande de plusieurs articles peut arriver en plusieurs colis.</li>\n</ul>\n<p>Un e-mail avec le numéro de suivi vous est envoyé dès l'expédition.</p>\n\n<h2>Frais de livraison</h2>\n<p>Les frais sont calculés et affichés avant la validation de la commande. <mark>[à compléter]</mark></p>\n\n<h2>Droits de douane</h2>\n<p>Pour les livraisons hors Union européenne, d'éventuels droits et taxes d'importation peuvent être dus à la réception. <mark>[à compléter]</mark></p>\n\n<h2>Colis endommagé ou incomplet</h2>\n<p>Vérifiez votre colis à la réception. En cas d'anomalie, contactez-nous dans les meilleurs délais à ousmane.djigal@gmail.com avec votre numéro de commande et des photos.</p>\n\n<h2>Retours et remboursements</h2>\n<p>Vous disposez de <strong>14 jours</strong> après réception pour changer d'avis (voir l'article 7 des <a href=\"/cgv/\">CGV</a>). Avant tout renvoi, contactez-nous : nous vous communiquerons l'adresse de retour. Le remboursement est effectué sous 14 jours, par le même moyen de paiement que celui utilisé pour la commande.</p>",
+            "enable_comments": false,
+            "template_name": "",
+            "registration_required": false,
+            "sites": [
+                1
+            ]
+        }
+    }
+]
