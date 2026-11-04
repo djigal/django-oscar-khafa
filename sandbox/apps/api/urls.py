@@ -14,6 +14,7 @@ from apps.api.views.cart import (
     CartView,
 )
 from apps.api.views.review import MyReviewList, ProductReviewList
+from apps.api.views.wishlist import Wishlist, WishlistItem
 from apps.stripe_checkout.payment_methods import (
     PaymentMethodDetail,
     PaymentMethodList,
@@ -72,6 +73,12 @@ urlpatterns = [
         name="api-product-reviews",
     ),
     path("reviews/mine/", MyReviewList.as_view(), name="api-my-reviews"),
+    path("wishlist/", Wishlist.as_view(), name="api-wishlist"),
+    path(
+        "wishlist/<int:product_id>/",
+        WishlistItem.as_view(),
+        name="api-wishlist-item",
+    ),
     path("account/", AccountDetail.as_view(), name="api-account"),
     path("account/password/", ChangePassword.as_view(), name="api-account-password"),
     path(
