@@ -1,3 +1,5 @@
+import shutil
+import tempfile
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
@@ -21,6 +23,7 @@ from oscar.test.factories import (
     create_order,
     create_product,
 )
+from haystack import connections
 from rest_framework.authtoken.models import Token
 
 User = get_user_model()
@@ -97,32 +100,6 @@ class MobileCatalogueTest(TestCase):
 
         self.assertEqual(self.client.get(url, {"page": 3}).status_code, 404)
 
-    def search(self, q, **params):
-        response = self.client.get(reverse("product-list"), {"q": q, **params})
-        return [p["id"] for p in response.json()["results"]]
-
-    def test_product_list_searches_title_description_and_upc(self):
-        self.book.description = "A novel about the sea"
-        self.book.upc = "978-SEA"
-        self.book.save()
-        self.assertEqual(self.search("shi"), [self.shirt.pk])
-        self.assertEqual(self.search("NOVEL"), [self.book.pk])
-        self.assertEqual(self.search("978-sea"), [self.book.pk])
-        self.assertEqual(self.search("978"), [])  # the UPC must match whole
-
-    def test_product_search_needs_every_word(self):
-        self.book.description = "A novel about the sea"
-        self.book.save()
-        self.assertEqual(self.search("book sea"), [self.book.pk])
-        self.assertEqual(self.search("book shirt"), [])
-
-    def test_product_search_within_a_category(self):
-        self.assertEqual(self.search("shirt", category=self.clothing.pk), [self.shirt.pk])
-        self.assertEqual(self.search("book", category=self.clothing.pk), [])
-
-    def test_blank_search_lists_everything(self):
-        self.assertEqual(self.search("   "), [self.book.pk, self.shirt.pk])
-
     def test_product_detail_inlines_price(self):
         data = self.client.get(reverse("product-detail", args=[self.book.pk])).json()
         self.assertEqual(data["title"], "Book")
@@ -139,6 +116,78 @@ class MobileCatalogueTest(TestCase):
         self.assertEqual([c["name"] for c in children], ["Shirts"])
         self.assertEqual(children[0]["parent_id"], self.clothing.pk)
         self.assertFalse(children[0]["has_children"])
+
+
+class MobileProductSearchTest(TestCase):
+    """``?q=`` goes through Haystack, in a temporary Whoosh index"""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.index_path = tempfile.mkdtemp()
+        cls.saved_connections = connections.connections_info
+        connections.connections_info = {
+            "default": {
+                "ENGINE": "haystack.backends.whoosh_backend.WhooshEngine",
+                "PATH": cls.index_path,
+            }
+        }
+        connections.reload("default")
+
+    @classmethod
+    def tearDownClass(cls):
+        connections.connections_info = cls.saved_connections
+        connections.reload("default")
+        shutil.rmtree(cls.index_path, ignore_errors=True)
+        super().tearDownClass()
+
+    def setUp(self):
+        connections["default"].get_backend().clear()
+        self.clothing = create_from_breadcrumbs("Clothing")
+        self.books = create_from_breadcrumbs("Books")
+        # Indexed on save by the RealtimeSignalProcessor
+        self.shirt = create_product(title="Shirt", price=12, num_in_stock=3)
+        self.shirt.categories.add(self.clothing)
+        self.book = create_product(title="Book", price=5, num_in_stock=1)
+        self.book.categories.add(self.books)
+        self.book.description = "A novel about the sea"
+        self.book.upc = "978-SEA"
+        self.book.save()
+
+    def search(self, q, **params):
+        response = self.client.get(reverse("product-list"), {"q": q, **params})
+        self.assertEqual(response.status_code, 200)
+        return [p["id"] for p in response.json()["results"]]
+
+    def test_searches_title_start_description_and_upc(self):
+        self.assertEqual(self.search("shi"), [self.shirt.pk])
+        self.assertEqual(self.search("NOVEL"), [self.book.pk])
+        self.assertEqual(self.search("978-sea"), [self.book.pk])
+
+    def test_needs_every_word(self):
+        self.assertEqual(self.search("book sea"), [self.book.pk])
+        self.assertEqual(self.search("book shirt"), [])
+        self.assertEqual(self.search("nothing"), [])
+
+    def test_within_a_category(self):
+        self.assertEqual(self.search("shirt", category=self.clothing.pk), [self.shirt.pk])
+        self.assertEqual(self.search("book", category=self.clothing.pk), [])
+
+    def test_blank_search_lists_everything(self):
+        self.assertEqual(self.search("   "), [self.book.pk, self.shirt.pk])
+
+    def test_most_relevant_first(self):
+        guide = create_product(title="Sea guide")
+        guide.description = "All about the sea, the sea and the sea"
+        guide.save()
+        results = self.search("sea")
+        self.assertEqual(results[0], guide.pk)
+        self.assertCountEqual(results, [guide.pk, self.book.pk])
+
+    def test_hidden_product_still_in_the_index_is_left_out(self):
+        self.book.is_public = False
+        self.book.save()  # still indexed: the index keeps every product saved
+        self.assertEqual(self.search("novel"), [])
 
 
 class UserDetailsTest(TestCase):
