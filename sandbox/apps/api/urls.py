@@ -6,6 +6,7 @@ before oscarapi.urls (see sandbox/urls.py).
 from django.urls import path
 
 from apps.api.views.account import AccountDetail, ChangePassword, PasswordReset
+from apps.api.views.auth import Logout
 from apps.api.views.cart import (
     CartLineDetail,
     CartLines,
@@ -79,6 +80,7 @@ urlpatterns = [
         WishlistItem.as_view(),
         name="api-wishlist-item",
     ),
+    path("auth/logout/", Logout.as_view(), name="api-auth-logout"),
     path("account/", AccountDetail.as_view(), name="api-account"),
     path("account/password/", ChangePassword.as_view(), name="api-account-password"),
     path(

@@ -20,6 +20,8 @@ services:
 
     environment:
       WORKDIR: /app
+      # settings.py is not in debug unless asked (no SECRET_KEY needed here)
+      DEBUG: "True"
       # Read by tests/settings.py so plain `pytest` uses the Postgres service below.
       DATABASE_NAME: django_oscar
       DATABASE_USER: django_oscar

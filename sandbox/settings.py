@@ -8,7 +8,8 @@ env = environ.Env()
 location = lambda x: os.path.join(
     os.path.dirname(os.path.realpath(__file__)), x)
 
-DEBUG = env.bool('DEBUG', default=True)
+# Off unless asked for (the dev compose file sets DEBUG=True)
+DEBUG = env.bool('DEBUG', default=False)
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1'])
 
@@ -127,7 +128,13 @@ STORAGES = {
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Make this unique, and don't share it with anybody.
-SECRET_KEY = env.str('SECRET_KEY', default='UajFCuyjDKmWHe29neauXzHi9eZoRXr6RMbT5JyAdPiACBP6Cra2')
+# Never a known key outside debug: without SECRET_KEY the server does not start
+SECRET_KEY = env.str('SECRET_KEY', default='')
+if not SECRET_KEY:
+    if not DEBUG:
+        from django.core.exceptions import ImproperlyConfigured
+        raise ImproperlyConfigured('SECRET_KEY must be set when DEBUG is off')
+    SECRET_KEY = 'insecure-development-key-only'
 
 TEMPLATES = [
     {
@@ -423,6 +430,9 @@ REST_FRAMEWORK = {
     # Password reset emails (POST /api/account/password-reset/), per client IP
     'DEFAULT_THROTTLE_RATES': {
         'password_reset': env('API_PASSWORD_RESET_RATE', default='5/hour'),
+        # Sign in attempts and new accounts, per client IP
+        'login': env('API_LOGIN_RATE', default='10/minute'),
+        'register': env('API_REGISTER_RATE', default='5/hour'),
     },
     # Behind the host nginx (X-Forwarded-For): throttle the real client IP
     'NUM_PROXIES': env.int('API_NUM_PROXIES', default=1),

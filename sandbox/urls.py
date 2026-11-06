@@ -7,8 +7,7 @@ from django.contrib import admin
 from django.contrib.sitemaps import views
 from django.urls import include, path
 from oscar.views import handler403, handler404, handler500
-from rest_framework.authtoken.views import obtain_auth_token
-
+from apps.api.views.auth import ThrottledObtainAuthToken
 from apps.sitemaps import base_sitemaps
 
 admin.autodiscover()
@@ -22,8 +21,9 @@ urlpatterns = [
     path('i18n/', include(django.conf.urls.i18n)),
 
     # REST API for the mobile app, kept outside i18n_patterns so its URLs are
-    # stable. EmailBackend lets obtain_auth_token take the email as username.
-    path('api/auth/token/', obtain_auth_token, name='api-auth-token'),
+    # stable. EmailBackend lets the token view take the email as username;
+    # attempts are throttled (login rate).
+    path('api/auth/token/', ThrottledObtainAuthToken.as_view(), name='api-auth-token'),
     path('api/', include('apps.api.urls')),
     path('api/', include('oscarapi.urls')),
 

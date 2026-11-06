@@ -31,6 +31,9 @@ ProductReview = get_model("reviews", "ProductReview")
 
 
 class AuthTokenTest(TestCase):
+    def setUp(self):
+        cache.clear()  # throttle counters
+
     def test_token_is_obtained_with_email(self):
         User.objects.create_user("jdoe", "jdoe@example.com", "s3cret-pass")
         response = self.client.post(
@@ -61,6 +64,60 @@ class AuthTokenTest(TestCase):
         )
         self.assertEqual(response.status_code, 201)
         self.assertTrue(User.objects.filter(email="new@example.com").exists())
+
+
+class AuthThrottleAndLogoutTest(TestCase):
+    def setUp(self):
+        cache.clear()  # throttle counters
+        self.user = User.objects.create_user(
+            "jdoe", "jdoe@example.com", "s3cret-pass"
+        )
+
+    def sign_in(self, password):
+        return self.client.post(
+            reverse("api-auth-token"),
+            {"username": "jdoe@example.com", "password": password},
+        )
+
+    def test_sign_in_attempts_are_throttled(self):
+        statuses = [self.sign_in("wrong").status_code for _ in range(11)]
+        self.assertEqual(statuses, [400] * 10 + [429])
+        # the right password waits too
+        self.assertEqual(self.sign_in("s3cret-pass").status_code, 429)
+
+    def test_registrations_are_throttled(self):
+        statuses = [
+            self.client.post(
+                reverse("api-register"),
+                {
+                    "email": f"new{i}@example.com",
+                    "password1": "Sup3r-secret-42",
+                    "password2": "Sup3r-secret-42",
+                },
+                content_type="application/json",
+            ).status_code
+            for i in range(6)
+        ]
+        self.assertEqual(statuses, [201] * 5 + [429])
+        self.assertFalse(User.objects.filter(email="new5@example.com").exists())
+
+    def test_logout_deletes_the_token(self):
+        token = Token.objects.create(user=self.user)
+        auth = {"HTTP_AUTHORIZATION": f"Token {token.key}"}
+
+        response = self.client.post(reverse("api-auth-logout"), **auth)
+
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(Token.objects.filter(key=token.key).exists())
+        # the old token is refused everywhere
+        self.assertEqual(
+            self.client.get(reverse("api-account"), **auth).status_code, 401
+        )
+
+    def test_logout_needs_a_token(self):
+        self.assertEqual(
+            self.client.post(reverse("api-auth-logout")).status_code, 401
+        )
 
 
 class MobileCatalogueTest(TestCase):
@@ -556,6 +613,7 @@ class CartApiTest(TestCase):
         self.assertEqual(cart["vouchers"], [])
         self.assertEqual(cart["total_incl_tax"], "24.00")
 
+    @override_settings(LANGUAGE_CODE="en-gb")  # messages compared in English, whatever the env says
     def test_voucher_errors(self):
         self.voucher(code="BULK", min_items=5)
         self.add(self.book, **self.auth)
