@@ -27,9 +27,10 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import TemplateView
 from oscarapi.basket import operations
 from oscarapi.serializers.checkout import ShippingAddressSerializer
-from rest_framework import authentication, permissions, serializers, status, views
+from rest_framework import permissions, serializers, status, views
 from rest_framework.response import Response
 
+from apps.api.authentication import ExpiringTokenAuthentication
 from apps.api.views.cart import get_cart
 from apps.stripe_checkout import services
 from apps.stripe_checkout.models import StripeCheckout
@@ -45,7 +46,7 @@ class _StartSerializer(serializers.Serializer):
 
 
 class _CheckoutAPIView(views.APIView):
-    authentication_classes = (authentication.TokenAuthentication,)
+    authentication_classes = (ExpiringTokenAuthentication,)
     permission_classes = (permissions.AllowAny,)
 
 

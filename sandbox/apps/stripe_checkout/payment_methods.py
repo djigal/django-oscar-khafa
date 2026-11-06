@@ -19,9 +19,10 @@ from django.conf import settings
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import TemplateView
-from rest_framework import authentication, permissions, serializers, status, views
+from rest_framework import permissions, serializers, status, views
 from rest_framework.response import Response
 
+from apps.api.authentication import ExpiringTokenAuthentication
 from apps.stripe_checkout import services
 
 logger = logging.getLogger("apps.stripe_checkout")
@@ -71,7 +72,7 @@ def _stripe_failed(message):
 
 
 class _PaymentMethodsAPIView(views.APIView):
-    authentication_classes = (authentication.TokenAuthentication,)
+    authentication_classes = (ExpiringTokenAuthentication,)
     permission_classes = (permissions.IsAuthenticated,)
 
 

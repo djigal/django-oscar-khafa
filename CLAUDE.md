@@ -11,7 +11,7 @@ Django Oscar: a domain-driven e-commerce framework for Django, distributed as th
 This fork (Oscar 4.2.1) runs the khafa shop: the site is `sandbox/` (settings via env, Postgres, prod behind host nginx, see `docker-compose.prod.yml`). It is also the **backend of the Flutter mobile app** (`/workspace`), which is migrating here from WooCommerce:
 - REST API via **django-oscar-api** 3.3 (DRF), mounted at `/api/` in `sandbox/urls.py`, **outside** `i18n_patterns`
 - Mobile overrides in `sandbox/apps/api/` (`OSCARAPI_OVERRIDE_MODULES = ['apps.api']`): product list (paginated: `?page=`, `?page_size=`) and detail with inline price and availability, `?category=<id>` filter (descendants included), `?q=<words>` search through **Haystack** (the website's `ProductIndex`, every word required, start of a title word enough, most relevant first, intersected with the browsable queryset: `search_products` in `views/product.py`; tests use a temporary Whoosh index, see `MobileProductSearchTest`), categories with `id`/`parent_id`/`has_children` and `?parent=<id>`
-- Mobile auth: DRF token (`Authorization: Token <t>`) from `/api/auth/token/` (email as `username`, via `EmailBackend`; `ThrottledObtainAuthToken` in `sandbox/apps/api/views/auth.py`, scope `login` = `API_LOGIN_RATE`, 10/minute); `POST /api/auth/logout/` deletes the token sent (`Logout`, 204, 401 without token); registration via `/api/register/` (`OSCARAPI_ENABLE_REGISTRATION`; `RegistrationView` overridden in `sandbox/apps/api/views/login.py` through `OSCARAPI_OVERRIDE_MODULES`, scope `register` = `API_REGISTER_RATE`, 5/hour); `GET /api/login/` returns the signed-in user for the app profile (`OSCARAPI_EXPOSE_USER_DETAILS`, `OSCARAPI_USER_FIELDS`, both overridable by env); order history via `/api/orders/` (+ `id`, `OSCARAPI_ORDER_FIELDS`) and `/api/orders/<id>/lines/` (+ `title`, `OSCARAPI_ORDERLINE_FIELDS`), both lists set to the oscarapi 3.3 defaults plus these fields; product reviews (not in oscarapi) in `sandbox/apps/api/views/review.py`, routed by `sandbox/apps/api/urls.py` (included before `oscarapi.urls`): `products/<id>/reviews/` (GET approved / POST as the user) and `reviews/mine/`; products get `reviews_count` (annotated in the product views); account settings in `sandbox/apps/api/views/account.py`: `account/` (GET / PATCH first and last name, email read-only) and `account/password/` (POST `old_password`, `new_password1`, `new_password2` through Django's `PasswordChangeForm`, 204, the token stays valid) and `account/password-reset/` (POST `email`, Oscar's `PasswordResetForm` emails the website reset link, always 204, `ScopedRateThrottle` scope `password_reset` = `API_PASSWORD_RESET_RATE`, client IP behind `API_NUM_PROXIES` proxies; links use `OSCAR_URL_SCHEMA`, https by default; real emails need `EMAIL_HOST`, otherwise they are printed on the console); app basket in `sandbox/apps/api/views/cart.py` (`cart/`, `cart/lines/`, `cart/vouchers/`, answers the whole priced basket, checks the stock on add and quantity changes, guest basket from the session merged into the user basket when the token comes with the session cookie; it never saves the session mid-request, see `get_cart`)
+- Mobile auth: DRF token (`Authorization: Token <t>`) from `/api/auth/token/` (email as `username`, via `EmailBackend`; `ThrottledObtainAuthToken` in `sandbox/apps/api/views/auth.py`, scope `login` = `API_LOGIN_RATE`, 10/minute); `POST /api/auth/logout/` deletes the token sent (`Logout`, 204, 401 without token); tokens expire after `API_TOKEN_TTL_DAYS` days without use (`apps/api/authentication.py` `ExpiringTokenAuthentication`, in `DEFAULT_AUTHENTICATION_CLASSES` and in the views that set their own classes: cart, checkout, payment methods, logout; a used token is moved forward at most once a day; an expired one is deleted and answers 401 "Token has expired.", on public endpoints too; signing in again gives a new token; `0`, the default, turns the expiry off); registration via `/api/register/` (`OSCARAPI_ENABLE_REGISTRATION`; `RegistrationView` overridden in `sandbox/apps/api/views/login.py` through `OSCARAPI_OVERRIDE_MODULES`, scope `register` = `API_REGISTER_RATE`, 5/hour); `GET /api/login/` returns the signed-in user for the app profile (`OSCARAPI_EXPOSE_USER_DETAILS`, `OSCARAPI_USER_FIELDS`, both overridable by env); order history via `/api/orders/` (+ `id`, `OSCARAPI_ORDER_FIELDS`) and `/api/orders/<id>/lines/` (+ `title`, `OSCARAPI_ORDERLINE_FIELDS`), both lists set to the oscarapi 3.3 defaults plus these fields; product reviews (not in oscarapi) in `sandbox/apps/api/views/review.py`, routed by `sandbox/apps/api/urls.py` (included before `oscarapi.urls`): `products/<id>/reviews/` (GET approved / POST as the user) and `reviews/mine/`; products get `reviews_count` (annotated in the product views); account settings in `sandbox/apps/api/views/account.py`: `account/` (GET / PATCH first and last name, email read-only) and `account/password/` (POST `old_password`, `new_password1`, `new_password2` through Django's `PasswordChangeForm`, 204, the token stays valid) and `account/password-reset/` (POST `email`, Oscar's `PasswordResetForm` emails the website reset link, always 204, `ScopedRateThrottle` scope `password_reset` = `API_PASSWORD_RESET_RATE`, client IP behind `API_NUM_PROXIES` proxies; links use `OSCAR_URL_SCHEMA`, https by default; real emails need `EMAIL_HOST`, otherwise they are printed on the console); app basket in `sandbox/apps/api/views/cart.py` (`cart/`, `cart/lines/`, `cart/vouchers/`, answers the whole priced basket, checks the stock on add and quantity changes, guest basket from the session merged into the user basket when the token comes with the session cookie; it never saves the session mid-request, see `get_cart`)
 - Settings defaults are safe: `DEBUG` is off unless the env sets `DEBUG=True` (the dev `docker-compose.yml` does), and without `SECRET_KEY` the server refuses to start outside debug (`ImproperlyConfigured`); the prod `.env.prod` must define `SECRET_KEY`
 - Payment: **Stripe Checkout** in `sandbox/apps/stripe_checkout/` (routed in `apps/api/urls.py` before oscarapi, whose `checkout/` places unpaid orders): `checkout/` GET totals / POST freezes the basket (from `get_cart`) and opens a Stripe session (`StripeCheckout` row: basket, user, email, address JSON with the country code, pre-generated order number, amount); the order is placed **only once paid**, by the webhook `checkout/stripe/webhook/` (`stripe.Webhook.construct_event`, `STRIPE_WEBHOOK_SECRET`) or by `checkout/<session_id>/` polling Stripe, once (`select_for_update` on the row) via `OrderPlacementMixin` without request (payment source "Stripe", event "Paid", confirmation email on commit); `checkout.session.expired` / `checkout/<session_id>/cancel/` thaw the basket (a guest gets it back in their session). Stripe lines = basket lines after discounts + delivery, one "Order N" line if they do not add up. Env: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_CHECKOUT_EXPIRY_MINUTES` (30). Tests mock `stripe.checkout.Session.*` and sign webhooks with HMAC: `./manage.py test apps.stripe_checkout`. Spec in the Flutter repo: `specs/005-stripe-checkout/`
 - Saved cards in `sandbox/apps/stripe_checkout/payment_methods.py` (token required): each user gets a Stripe Customer (`StripeCustomer`, one per test/live mode from the key prefix, created on first use by `services.customer_id`); `GET payment-methods/` lists the cards (`id`, `brand`, `last4`, `exp_month`, `exp_year`, `name`; `[]` without a customer), `POST` (`client` `app`/`web`) answers the `session_id` + `url` of a Checkout page in **setup** mode (503 without key), `DELETE payment-methods/<pm_id>/` (204, 404 for a card of another customer); back to `payment-methods/return/` (app) or `/app/?payment_method_session=<id>[&canceled=1]` (web). Signed-in checkouts pass `customer` (not `customer_email`) with `saved_payment_method_options`, so the Stripe page offers the saved cards and to save the new one. Stripe refuses `payment_method_types` on new sessions (payment methods come from the dashboard), and stripe-python objects are not dicts (`obj["key"]`, never `.get()`): test mocks build them with `construct_from`
@@ -74,18 +74,49 @@ make extract_translations / compile_translations
 
 ## Flutter web app (/app/)
 
-The app's web build is served by the host nginx from `/srv/oscar/app/` (copied with `rsync -a --delete build/web/ <server>:/srv/oscar/app/`), on the same origin as the API. Add to the HTTPS `server` block, before `location /` (not yet in `docker/prod/nginx-host.conf.example`, root-owned):
+The app's web build is served by the host nginx from `/srv/oscar/app/` (copied with `rsync -a --delete build/web/ <server>:/srv/oscar/app/`), on the same origin as the API. The host site file (`/etc/nginx/sites-enabled/khafadropshipping`, not in this repo; `docker/prod/nginx-host.conf.example` is the older template) has, in the HTTPS `server` block before `location /`:
 
 ```nginx
+# top of the file (http context): main.dart.js is not hashed, so the app
+# files are revalidated on every visit (ETag, 304 when unchanged)
+map $uri $khafa_app_cache {
+    default            "no-cache";
+    ~^/app/icons/      "public, max-age=604800";
+    =/app/favicon.png  "public, max-age=604800";
+}
+
 location = /app { return 301 /app/; }
 location /app/ {
     alias /srv/oscar/app/;
     try_files $uri $uri/ /app/index.html;
-    # files that point to the new build must not be cached
-    location ~ (index\.html|flutter_bootstrap\.js|flutter_service_worker\.js|version\.json|manifest\.json)$ {
-        add_header Cache-Control "no-cache";
-    }
+    gzip on; gzip_vary on; gzip_comp_level 6; gzip_min_length 1024;
+    gzip_types application/javascript text/javascript application/json application/wasm
+               text/css image/svg+xml text/plain application/manifest+json;
+    add_header Cache-Control $khafa_app_cache always;
+    # no nested location: an add_header there would drop all of these
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "same-origin" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://www.gstatic.com https://fonts.gstatic.com; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+}
+
+# API JSON compressed (20 products: 14.7 KB -> 3.6 KB); the HTML of the
+# site is not (CSRF token in the page: BREACH)
+location /api/ {
+    proxy_pass http://127.0.0.1:8000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    gzip on; gzip_vary on; gzip_proxied any; gzip_comp_level 5; gzip_min_length 1024;
+    gzip_types application/json;
 }
 ```
+
+- The CSP allows `www.gstatic.com` because the build loads CanvasKit from Google's CDN (default, no `--no-web-resources-cdn`) and `fonts.gstatic.com` for fallback fonts; Stripe needs nothing (full-page redirect). Product images come from this origin (`/media/`)
+- HSTS on the Django answers (site, API) comes from `SECURE_HSTS_SECONDS=31536000` in `.env.prod`; `/media/` is served by nginx without it (the browser applies HSTS to the whole host anyway)
+- Check after a change: `curl -sI -H "Accept-Encoding: gzip" https://khafadropshipping.ddns.net/app/main.dart.js` (gzip, no-cache), `curl -sI https://khafadropshipping.ddns.net/app/` (6 security headers), `/api/products/` (gzip + HSTS), `/` (HSTS, no gzip)
 
 `REST_FRAMEWORK` is token-only (`TokenAuthentication`): with session authentication, a customer signed in on the website would see the app's API calls refused for CSRF (see `WebAppOriginTest`). Guest baskets keep using the session.

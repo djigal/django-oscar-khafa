@@ -424,8 +424,9 @@ OSCAR_MODERATE_REVIEWS = True
 # be authenticated by session and have the app's requests refused for CSRF.
 # Guest baskets still use the session (not an authentication).
 REST_FRAMEWORK = {
+    # TokenAuthentication with an expiry (API_TOKEN_TTL_DAYS)
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',
+        'apps.api.authentication.ExpiringTokenAuthentication',
     ],
     # Password reset emails (POST /api/account/password-reset/), per client IP
     'DEFAULT_THROTTLE_RATES': {
@@ -437,6 +438,9 @@ REST_FRAMEWORK = {
     # Behind the host nginx (X-Forwarded-For): throttle the real client IP
     'NUM_PROXIES': env.int('API_NUM_PROXIES', default=1),
 }
+
+# Days without use after which an app token stops working (0: never)
+API_TOKEN_TTL_DAYS = env.int('API_TOKEN_TTL_DAYS', default=0)
 
 OSCARAPI_ENABLE_REGISTRATION = True
 # GET /api/login/ returns the signed-in user, read by the app profile screen

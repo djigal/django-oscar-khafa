@@ -1,5 +1,6 @@
 import shutil
 import tempfile
+from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
@@ -7,6 +8,7 @@ from django.core import mail
 from django.core.cache import cache
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from oscar.apps.catalogue.categories import create_from_breadcrumbs
 from oscar.core.loading import get_model
@@ -118,6 +120,71 @@ class AuthThrottleAndLogoutTest(TestCase):
         self.assertEqual(
             self.client.post(reverse("api-auth-logout")).status_code, 401
         )
+
+
+@override_settings(API_TOKEN_TTL_DAYS=30)
+class TokenExpiryTest(TestCase):
+    def setUp(self):
+        cache.clear()  # throttle counters
+        self.user = User.objects.create_user(
+            "jdoe", "jdoe@example.com", "s3cret-pass"
+        )
+        self.token = Token.objects.create(user=self.user)
+        self.auth = {"HTTP_AUTHORIZATION": f"Token {self.token.key}"}
+
+    def age(self, days):
+        Token.objects.filter(pk=self.token.pk).update(
+            created=timezone.now() - timedelta(days=days)
+        )
+
+    def test_a_token_unused_for_too_long_is_refused_and_deleted(self):
+        self.age(31)
+
+        response = self.client.get(reverse("api-account"), **self.auth)
+
+        self.assertEqual(response.status_code, 401)
+        self.assertIn("expired", response.json()["detail"])
+        self.assertFalse(Token.objects.filter(pk=self.token.pk).exists())
+
+    def test_an_expired_token_is_refused_on_public_pages_too(self):
+        # the app sends its token everywhere: it must sign out on this 401
+        self.age(31)
+        response = self.client.get(reverse("api-cart"), **self.auth)
+        self.assertEqual(response.status_code, 401)
+
+    def test_using_a_token_moves_its_date_forward(self):
+        self.age(10)
+
+        response = self.client.get(reverse("api-account"), **self.auth)
+
+        self.assertEqual(response.status_code, 200)
+        created = Token.objects.get(pk=self.token.pk).created
+        self.assertLess(timezone.now() - created, timedelta(minutes=1))
+
+    def test_signing_in_again_gives_a_new_token(self):
+        self.age(31)
+
+        response = self.client.post(
+            reverse("api-auth-token"),
+            {"username": "jdoe@example.com", "password": "s3cret-pass"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotEqual(response.json()["token"], self.token.key)
+        self.assertEqual(Token.objects.filter(user=self.user).count(), 1)
+
+    def test_signing_in_keeps_a_valid_token(self):
+        response = self.client.post(
+            reverse("api-auth-token"),
+            {"username": "jdoe@example.com", "password": "s3cret-pass"},
+        )
+        self.assertEqual(response.json()["token"], self.token.key)
+
+    @override_settings(API_TOKEN_TTL_DAYS=0)
+    def test_no_expiry_when_turned_off(self):
+        self.age(400)
+        response = self.client.get(reverse("api-account"), **self.auth)
+        self.assertEqual(response.status_code, 200)
 
 
 class MobileCatalogueTest(TestCase):

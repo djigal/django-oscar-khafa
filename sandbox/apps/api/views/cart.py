@@ -23,9 +23,10 @@ from oscar.apps.basket import signals
 from oscar.core.loading import get_model
 from oscarapi.basket import operations
 from oscarapi.serializers.basket import VoucherAddSerializer
-from rest_framework import authentication, permissions, serializers, status, views
+from rest_framework import permissions, serializers, status, views
 from rest_framework.response import Response
 
+from apps.api.authentication import ExpiringTokenAuthentication
 from apps.api.mobile_serializers import MobileProductSerializer
 
 Product = get_model("catalogue", "Product")
@@ -80,7 +81,7 @@ def total(basket, name):
 
 
 class CartView(views.APIView):
-    authentication_classes = (authentication.TokenAuthentication,)
+    authentication_classes = (ExpiringTokenAuthentication,)
     permission_classes = (permissions.AllowAny,)
 
     def respond(self, request, basket=None, status_code=status.HTTP_200_OK):
