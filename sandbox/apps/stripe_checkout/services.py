@@ -14,6 +14,7 @@ from decimal import ROUND_HALF_UP, Decimal
 import stripe
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
+from django.core.mail import mail_admins
 from django.db import transaction
 from django.urls import reverse
 from django.utils.translation import gettext as _
@@ -31,6 +32,7 @@ Repository = get_class("shipping.repository", "Repository")
 Selector = get_class("partner.strategy", "Selector")
 Applicator = get_class("offer.applicator", "Applicator")
 Basket = get_model("basket", "Basket")
+OrderNote = get_model("order", "OrderNote")
 ShippingAddress = get_model("order", "ShippingAddress")
 Source = get_model("payment", "Source")
 SourceType = get_model("payment", "SourceType")
@@ -41,10 +43,60 @@ ZERO_DECIMAL_CURRENCIES = {
     "pyg", "rwf", "ugx", "vnd", "vuv", "xaf", "xof", "xpf",
 }  # fmt: skip
 PAID_STATUSES = ("paid", "no_payment_required")
+# PaymentIntent statuses of a delayed payment that will not go through
+FAILED_INTENT_STATUSES = ("requires_payment_method", "canceled")
 
 
 class CheckoutError(Exception):
     """A checkout that cannot start, with a message for the customer"""
+
+
+def alert(subject, message):
+    """Tells the shop admins (ADMINS) by email, besides the error log"""
+    logger.error("%s: %s", subject, message)
+    mail_admins("Stripe checkout: %s" % subject, message, fail_silently=True)
+
+
+def _field(session, name):
+    """A field of a Stripe session (dict from a webhook, StripeObject from the
+    API, without .get()), None when absent"""
+    try:
+        return session[name]
+    except KeyError:
+        return None
+
+
+def payment_intent_id(session):
+    """The PaymentIntent id, also when the session was retrieved with the
+    PaymentIntent expanded"""
+    intent = _field(session, "payment_intent")
+    if intent is None or isinstance(intent, str):
+        return intent or ""
+    return intent["id"]
+
+
+def payment_failed(session):
+    """A delayed payment (e.g. SEPA debit) refused after the Stripe page; it
+    is known only when the PaymentIntent is expanded"""
+    intent = _field(session, "payment_intent")
+    return (
+        session["status"] == "complete"
+        and session["payment_status"] == "unpaid"
+        and intent is not None
+        and not isinstance(intent, str)
+        and _field(intent, "status") in FAILED_INTENT_STATUSES
+    )
+
+
+def can_access(checkout, request):
+    """Only the user of a checkout, or the session of a guest, may follow or
+    cancel it (its session id appears in URLs)"""
+    if checkout.user_id is not None:
+        return request.user.is_authenticated and request.user.pk == checkout.user_id
+    if not checkout.session_key:
+        # started before the session was recorded
+        return True
+    return request.session.session_key == checkout.session_key
 
 
 def is_configured():
@@ -171,6 +223,8 @@ def create_checkout(request, basket, email, shipping_address, client):
     metadata = {"basket_id": str(basket.pk), "order_number": order_number}
     if user is None:
         payer = {"customer_email": email}
+        if not request.session.session_key:
+            request.session.save()
     else:
         # the Stripe page offers the saved cards and to save the new one
         payer = {
@@ -180,6 +234,24 @@ def create_checkout(request, basket, email, shipping_address, client):
                 "allow_redisplay_filters": ["always", "limited", "unspecified"],
             },
         }
+    with transaction.atomic():
+        # one payment per basket: a second request (e.g. a double tap) waits
+        # here, then finds the basket frozen by the first one
+        locked = Basket.objects.select_for_update().get(pk=basket.pk)
+        if locked.status != Basket.OPEN:
+            raise CheckoutError(_("A payment is already in progress for this basket"))
+        return _open_session(
+            request, basket, user, email, shipping_address, method, total,
+            charge, order_number, metadata, payer, success_url, cancel_url,
+        )  # fmt: skip
+
+
+def _open_session(
+    request, basket, user, email, shipping_address, method, total, charge,
+    order_number, metadata, payer, success_url, cancel_url,
+):  # fmt: skip
+    """Creates the Stripe session and freezes the basket (in the transaction
+    of create_checkout, which holds the basket lock)"""
     session = stripe.checkout.Session.create(
         api_key=settings.STRIPE_SECRET_KEY,
         mode="payment",
@@ -198,43 +270,89 @@ def create_checkout(request, basket, email, shipping_address, client):
     )
     country = shipping_address.pop("country")
     shipping_address["country"] = country.pk
-    with transaction.atomic():
-        basket.freeze()
-        checkout = StripeCheckout.objects.create(
-            session_id=session["id"],
-            basket=basket,
-            user=user,
-            email=email,
-            shipping_address=shipping_address,
-            shipping_code=method.code,
-            order_number=order_number,
-            amount=amount(total),
-            currency=basket.currency,
-        )
+    basket.freeze()
+    checkout = StripeCheckout.objects.create(
+        session_id=session["id"],
+        basket=basket,
+        user=user,
+        email=email,
+        session_key="" if user else (request.session.session_key or ""),
+        shipping_address=shipping_address,
+        shipping_code=method.code,
+        order_number=order_number,
+        amount=amount(total),
+        currency=basket.currency,
+    )
     return checkout, session["url"]
 
 
 def retrieve_session(checkout):
+    # the PaymentIntent tells whether a delayed payment failed
     return stripe.checkout.Session.retrieve(
-        checkout.session_id, api_key=settings.STRIPE_SECRET_KEY
+        checkout.session_id,
+        api_key=settings.STRIPE_SECRET_KEY,
+        expand=["payment_intent"],
     )
 
 
 def apply_session(checkout, session):
     """Brings the checkout up to date with its Stripe session"""
     if session["status"] == "complete" and session["payment_status"] in PAID_STATUSES:
-        place_order(checkout, session)
+        try:
+            place_order(checkout, session)
+        except Exception as error:  # pylint: disable=broad-except
+            # the customer paid: never lose it silently
+            needs_attention(checkout, session, error)
     elif session["status"] == "expired":
         close(checkout, StripeCheckout.EXPIRED)
+    elif payment_failed(session):
+        close(checkout, StripeCheckout.FAILED)
     checkout.refresh_from_db()
     return checkout
 
 
 def sync(checkout):
-    """Asks Stripe about a checkout still waiting for its payment"""
-    if checkout.status == StripeCheckout.OPEN and is_configured():
+    """Asks Stripe about a checkout still waiting for its payment, or paid
+    without its order (tries to place it again)"""
+    if (
+        checkout.status in (StripeCheckout.OPEN, StripeCheckout.ATTENTION)
+        and is_configured()
+    ):
         apply_session(checkout, retrieve_session(checkout))
     return checkout
+
+
+def needs_attention(checkout, session, error):
+    """Paid, but the order could not be placed: the checkout keeps the frozen
+    basket and the payment, and the admins are told once"""
+    logger.exception(
+        "Stripe session %s paid, order %s not placed",
+        checkout.session_id, checkout.order_number,
+    )  # fmt: skip
+    with transaction.atomic():
+        checkout = StripeCheckout.objects.select_for_update().get(pk=checkout.pk)
+        if checkout.order_id is not None:
+            return
+        first_time = checkout.status != StripeCheckout.ATTENTION
+        checkout.status = StripeCheckout.ATTENTION
+        checkout.payment_intent = payment_intent_id(session)
+        checkout.error = "%s: %s" % (type(error).__name__, error)
+        checkout.save(update_fields=["status", "payment_intent", "error", "updated"])
+    if first_time:
+        alert(
+            "order %s paid but not placed" % checkout.order_number,
+            "Stripe session %s (payment %s, %s %s) was paid but the order "
+            "could not be placed:\n\n%s\n\nFix the cause, then use the admin "
+            'action "Place the order again" on this Stripe checkout, or '
+            "refund the payment in Stripe."
+            % (
+                checkout.session_id,
+                checkout.payment_intent,
+                checkout.amount,
+                checkout.currency,
+                checkout.error,
+            ),
+        )
 
 
 def cancel(checkout):
@@ -272,7 +390,8 @@ def restore_basket(checkout, request):
     baskets merged by oscarapi)"""
     basket = checkout.basket
     if (
-        checkout.status in (StripeCheckout.OPEN, StripeCheckout.PAID)
+        checkout.status
+        in (StripeCheckout.OPEN, StripeCheckout.PAID, StripeCheckout.ATTENTION)
         or basket.status != Basket.OPEN
         or checkout.user_id is not None
         or request.user.is_authenticated
@@ -320,16 +439,22 @@ def place_order(checkout, session):
         basket.strategy = Selector().strategy(user=checkout.user)
         Applicator().apply(basket, user)
         method, charge, total = price_basket(basket, user)
-        paid = Decimal(session["amount_total"]) / (
-            1 if checkout.currency.lower() in ZERO_DECIMAL_CURRENCIES else 100
-        )
-        if paid != amount(total):
-            # the customer paid the total of the session: the order says so
-            logger.error(
-                "Stripe session %s paid %s, order %s now totals %s",
-                checkout.session_id, paid, checkout.order_number, amount(total),
-            )  # fmt: skip
-        payment_intent = session["payment_intent"] or ""
+        zero_decimal = checkout.currency.lower() in ZERO_DECIMAL_CURRENCIES
+        # quantized so the review note reads "30.00 GBP", not "30 GBP"
+        paid = (
+            Decimal(session["amount_total"]) / (1 if zero_decimal else 100)
+        ).quantize(Decimal("1") if zero_decimal else Decimal("0.01"))
+        paid_currency = (_field(session, "currency") or checkout.currency).upper()
+        mismatch = None
+        if paid != amount(total) or paid_currency != checkout.currency.upper():
+            # the order is placed (the customer paid), marked for review
+            mismatch = (
+                "Stripe charged %s %s, the order totals %s %s "
+                "(prices, offers or vouchers changed during the payment). "
+                "Check the order, then refund the difference or ask for it."
+                % (paid, paid_currency, amount(total), checkout.currency)
+            )
+        payment_intent = payment_intent_id(session)
         address = dict(checkout.shipping_address)
         address["country_id"] = address.pop("country")
         placer = _OrderPlacer(user)
@@ -358,7 +483,16 @@ def place_order(checkout, session):
         checkout.status = StripeCheckout.PAID
         checkout.order = order
         checkout.payment_intent = payment_intent
+        checkout.amount_paid = paid
+        checkout.error = ""
         checkout.save()
+        if mismatch:
+            # shown on the order page of the dashboard
+            OrderNote.objects.create(order=order, note_type="Warning", message=mismatch)
+            number = order.number
+            transaction.on_commit(
+                lambda: alert("order %s to review" % number, mismatch)
+            )
         transaction.on_commit(lambda: _send_confirmation(placer, order))
     return order
 
@@ -391,11 +525,17 @@ def summary(basket, user, request=None):
     }
 
 
+# what the app sees: paid without its order yet is still paid for the
+# customer (the shop places the order), a failed delayed payment ends the
+# checkout like a cancel
+PUBLIC_STATUSES = {StripeCheckout.ATTENTION: StripeCheckout.PAID}
+
+
 def status_payload(checkout):
     order = checkout.order
     return {
         "session_id": checkout.session_id,
-        "status": checkout.status,
+        "status": PUBLIC_STATUSES.get(checkout.status, checkout.status),
         "order_number": checkout.order_number,
         "amount": money(checkout.amount),
         "currency": checkout.currency,

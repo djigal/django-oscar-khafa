@@ -20,6 +20,10 @@ EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
 EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
 DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='webmaster@localhost')
+# Told by email of what needs a person (e.g. a Stripe payment whose order
+# could not be placed): ADMINS=ops@example.com,boss@example.com
+ADMINS = [(email, email) for email in env.list('ADMINS', default=[])]
+SERVER_EMAIL = env('SERVER_EMAIL', default=DEFAULT_FROM_EMAIL)
 # Print e-mails to the console unless an SMTP host is configured
 EMAIL_BACKEND = env(
     'EMAIL_BACKEND',
@@ -428,6 +432,8 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'apps.api.authentication.ExpiringTokenAuthentication',
     ],
+    # keeps the deletion of an expired token despite ATOMIC_REQUESTS
+    'EXCEPTION_HANDLER': 'apps.api.authentication.exception_handler',
     # Password reset emails (POST /api/account/password-reset/), per client IP
     'DEFAULT_THROTTLE_RATES': {
         'password_reset': env('API_PASSWORD_RESET_RATE', default='5/hour'),

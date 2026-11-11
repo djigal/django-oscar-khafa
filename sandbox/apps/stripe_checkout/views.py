@@ -18,7 +18,7 @@ import logging
 
 import stripe
 from django.conf import settings
-from django.http import HttpResponse, HttpResponseBadRequest
+from django.http import Http404, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext_lazy as _
@@ -48,6 +48,15 @@ class _StartSerializer(serializers.Serializer):
 class _CheckoutAPIView(views.APIView):
     authentication_classes = (ExpiringTokenAuthentication,)
     permission_classes = (permissions.AllowAny,)
+
+    @staticmethod
+    def get_checkout(request, session_id):
+        """The checkout of this user or guest session (404 for others: its
+        session id appears in URLs, browser history and logs)"""
+        checkout = get_object_or_404(StripeCheckout, session_id=session_id)
+        if not services.can_access(checkout, request):
+            raise Http404
+        return checkout
 
 
 class CheckoutView(_CheckoutAPIView):
@@ -111,7 +120,7 @@ class CheckoutView(_CheckoutAPIView):
 
 class CheckoutStatus(_CheckoutAPIView):
     def get(self, request, session_id):
-        checkout = get_object_or_404(StripeCheckout, session_id=session_id)
+        checkout = self.get_checkout(request, session_id)
         try:
             services.sync(checkout)
         except stripe.StripeError:
@@ -123,7 +132,7 @@ class CheckoutStatus(_CheckoutAPIView):
 
 class CheckoutCancel(_CheckoutAPIView):
     def post(self, request, session_id):
-        checkout = get_object_or_404(StripeCheckout, session_id=session_id)
+        checkout = self.get_checkout(request, session_id)
         try:
             checkout = services.cancel(checkout)
         except stripe.StripeError:
@@ -154,6 +163,8 @@ class StripeWebhook(View):
         "checkout.session.async_payment_succeeded",
         "checkout.session.expired",
     )
+    # a delayed payment (e.g. SEPA debit) refused: the basket comes back
+    FAILED = "checkout.session.async_payment_failed"
 
     def post(self, request):
         try:
@@ -164,9 +175,18 @@ class StripeWebhook(View):
             )
         except (ValueError, stripe.SignatureVerificationError):
             return HttpResponseBadRequest()
-        if event["type"] in self.EVENTS:
-            session = event["data"]["object"]
-            checkout = StripeCheckout.objects.filter(session_id=session["id"]).first()
-            if checkout is not None:
-                services.apply_session(checkout, session)
+        if event["type"] not in self.EVENTS + (self.FAILED,):
+            return HttpResponse()
+        session = event["data"]["object"]
+        checkout = StripeCheckout.objects.filter(session_id=session["id"]).first()
+        if checkout is None:
+            return HttpResponse()
+        if event["type"] == self.FAILED:
+            services.close(checkout, StripeCheckout.FAILED)
+            return HttpResponse()
+        checkout = services.apply_session(checkout, session)
+        if checkout.status == StripeCheckout.ATTENTION:
+            # paid, order not placed (admins told): Stripe sends the event
+            # again later, which tries again
+            return HttpResponse(status=500)
         return HttpResponse()

@@ -8,11 +8,18 @@ class StripeCheckout(models.Model):
     once Stripe confirms the payment (webhook or status poll)"""
 
     OPEN, PAID, EXPIRED, CANCELED = "open", "paid", "expired", "canceled"
+    # a delayed payment (e.g. SEPA debit) refused after the Stripe page
+    FAILED = "failed"
+    # paid, but the order could not be placed: an admin must look at it
+    # (admin action "Place the order again", or a refund)
+    ATTENTION = "attention"
     STATUS_CHOICES = (
         (OPEN, _("Waiting for payment")),
         (PAID, _("Paid")),
         (EXPIRED, _("Expired")),
         (CANCELED, _("Canceled")),
+        (FAILED, _("Payment failed")),
+        (ATTENTION, _("Paid, order not placed")),
     )
 
     session_id = models.CharField(_("Stripe session"), max_length=255, unique=True)
@@ -27,6 +34,9 @@ class StripeCheckout(models.Model):
         related_name="stripe_checkouts",
     )
     email = models.EmailField(_("Email"))
+    # Django session of a guest: only that session may follow or cancel the
+    # payment (the user for a signed-in checkout)
+    session_key = models.CharField(_("Session"), max_length=40, blank=True)
     # ShippingAddress fields, the country as its ISO 3166-1 alpha-2 code
     shipping_address = models.JSONField(_("Shipping address"))
     shipping_code = models.CharField(_("Shipping method"), max_length=128)
@@ -37,6 +47,12 @@ class StripeCheckout(models.Model):
         _("Status"), max_length=16, choices=STATUS_CHOICES, default=OPEN
     )
     payment_intent = models.CharField(_("Payment intent"), max_length=255, blank=True)
+    # what Stripe charged, set once paid
+    amount_paid = models.DecimalField(
+        _("Amount paid"), decimal_places=2, max_digits=12, null=True, blank=True
+    )
+    # why the order could not be placed (status "attention")
+    error = models.TextField(_("Error"), blank=True)
     order = models.ForeignKey(
         "order.Order",
         null=True,

@@ -8,9 +8,9 @@ from unittest import mock
 import stripe
 from django.contrib.auth import get_user_model
 from django.core import mail
-from django.test import TestCase, override_settings
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
-from oscar.core.loading import get_model
+from oscar.core.loading import get_class, get_model
 from oscar.test.factories import (
     BenefitFactory,
     ConditionalOfferFactory,
@@ -27,11 +27,13 @@ from apps.stripe_checkout.models import StripeCheckout, StripeCustomer
 User = get_user_model()
 Basket = get_model("basket", "Basket")
 Order = get_model("order", "Order")
+OrderNote = get_model("order", "OrderNote")
 
 WEBHOOK_SECRET = "whsec_test"
 SESSION = "apps.stripe_checkout.services.stripe.checkout.Session"
 CUSTOMER = "apps.stripe_checkout.services.stripe.Customer"
 PAYMENT_METHOD = "apps.stripe_checkout.services.stripe.PaymentMethod"
+PLACE_ORDER = "apps.stripe_checkout.services._OrderPlacer.place_order"
 
 
 def stripe_session(
@@ -421,6 +423,154 @@ class StripeCheckoutTest(TestCase):
             ).json()
         self.assertEqual(data["status"], "paid")
         self.assertTrue(Order.objects.exists())
+
+    # safety
+
+    @override_settings(ADMINS=[("ops", "ops@example.com")])
+    def test_paid_checkout_whose_order_fails_is_kept_and_told(self):
+        self.add(**self.auth)
+        self.start(auth=self.auth)
+        with mock.patch(PLACE_ORDER, side_effect=RuntimeError("boom")):
+            # Stripe will send the event again
+            response = self.webhook("checkout.session.completed", paid_session())
+            self.assertEqual(response.status_code, 500)
+            checkout = StripeCheckout.objects.get()
+            self.assertEqual(checkout.status, "attention")
+            self.assertIn("boom", checkout.error)
+            self.assertEqual(checkout.payment_intent, "pi_test_1")
+            self.assertEqual(checkout.basket.status, Basket.FROZEN)
+            self.assertFalse(Order.objects.exists())
+            self.assertEqual(len(mail.outbox), 1)
+            self.assertEqual(mail.outbox[0].to, ["ops@example.com"])
+            self.assertIn(checkout.order_number, mail.outbox[0].subject)
+            # the customer paid: the app shows it as paid
+            data = self.status(stripe_state=paid_session(), **self.auth).json()
+            self.assertEqual(data["status"], "paid")
+            self.assertIsNone(data["order"])
+            # told once
+            self.webhook("checkout.session.completed", paid_session())
+            self.assertEqual(len(mail.outbox), 1)
+        # cause fixed: the next event places the order
+        response = self.webhook("checkout.session.completed", paid_session())
+        self.assertEqual(response.status_code, 200)
+        checkout.refresh_from_db()
+        self.assertEqual(checkout.status, "paid")
+        self.assertEqual(checkout.error, "")
+        self.assertEqual(Order.objects.count(), 1)
+
+    def test_another_user_cannot_follow_or_cancel_a_payment(self):
+        self.add(**self.auth)
+        self.start(auth=self.auth)
+        other = User.objects.create_user("other", "other@example.com", "s3cret-pass")
+        other_auth = {
+            "HTTP_AUTHORIZATION": f"Token {Token.objects.create(user=other).key}"
+        }
+        self.assertEqual(self.status(**other_auth).status_code, 404)
+        self.assertEqual(self.status().status_code, 404)
+        with mock.patch(SESSION + ".expire") as expire:
+            response = self.client.post(
+                reverse("api-checkout-cancel", args=["cs_test_1"]), **other_auth
+            )
+        self.assertEqual(response.status_code, 404)
+        expire.assert_not_called()
+        self.assertEqual(StripeCheckout.objects.get().status, "open")
+
+    def test_another_guest_cannot_take_the_basket(self):
+        self.add()
+        self.start(guest_email="guest@example.com")
+        self.assertEqual(StripeCheckout.objects.get().session_key,
+                         self.client.session.session_key)  # fmt: skip
+        self.webhook("checkout.session.expired", stripe_session(status="expired"))
+        stranger = Client()
+        with mock.patch(
+            SESSION + ".retrieve", return_value=stripe_session(status="expired")
+        ):
+            response = stranger.get(reverse("api-checkout-status", args=["cs_test_1"]))
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(stranger.get(reverse("api-cart")).json()["num_items"], 0)
+        # the guest still gets it back
+        self.status(stripe_state=stripe_session(status="expired"))
+        self.assertEqual(self.client.get(reverse("api-cart")).json()["num_items"], 2)
+
+    def test_failed_delayed_payment_gives_the_basket_back(self):
+        self.add()
+        self.start(guest_email="guest@example.com")
+        unpaid = stripe_session(status="complete", payment_status="unpaid")
+        self.assertEqual(
+            self.webhook("checkout.session.async_payment_failed", unpaid).status_code,
+            200,
+        )
+        checkout = StripeCheckout.objects.get()
+        self.assertEqual(checkout.status, "failed")
+        self.assertEqual(checkout.basket.status, Basket.OPEN)
+        self.assertEqual(self.status().json()["status"], "failed")
+        self.assertEqual(self.client.get(reverse("api-cart")).json()["num_items"], 2)
+
+    def test_status_poll_sees_a_failed_delayed_payment(self):
+        self.add(**self.auth)
+        self.start(auth=self.auth)
+        failed = stripe_session(status="complete", payment_status="unpaid")
+        failed["payment_intent"] = {
+            "id": "pi_test_1",
+            "status": "requires_payment_method",
+        }
+        self.assertEqual(
+            self.status(stripe_state=failed, **self.auth).json()["status"], "failed"
+        )
+        # still processing: the checkout keeps waiting
+        self.add(**self.auth)
+        self.start(session=stripe_session(session_id="cs_test_2"), auth=self.auth)
+        processing = stripe_session(
+            session_id="cs_test_2", status="complete", payment_status="unpaid"
+        )
+        processing["payment_intent"] = {"id": "pi_test_2", "status": "processing"}
+        data = self.status("cs_test_2", stripe_state=processing, **self.auth).json()
+        self.assertEqual(data["status"], "open")
+
+    def test_second_payment_of_the_same_basket_is_refused(self):
+        Selector = get_class("partner.strategy", "Selector")
+        self.add(**self.auth)
+        stale = Basket.objects.get(owner=self.user, status=Basket.OPEN)
+        stale.strategy = Selector().strategy(user=self.user)
+        self.start(auth=self.auth)
+        # a double tap: the second request read the basket before the freeze
+        with mock.patch("apps.stripe_checkout.views.get_cart", return_value=stale):
+            response, create = self.start(
+                session=stripe_session(session_id="cs_test_2"), auth=self.auth
+            )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("already in progress", response.json()["non_field_errors"][0])
+        create.assert_not_called()
+        self.assertEqual(StripeCheckout.objects.count(), 1)
+
+    @override_settings(ADMINS=[("ops", "ops@example.com")])
+    def test_amount_mismatch_places_the_order_marked_for_review(self):
+        self.add(**self.auth)
+        self.start(auth=self.auth)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.webhook("checkout.session.completed", paid_session(amount_total=3000))
+        order = Order.objects.get()
+        checkout = StripeCheckout.objects.get()
+        self.assertEqual(checkout.status, "paid")
+        self.assertEqual(checkout.amount_paid, Decimal("30.00"))
+        self.assertEqual(order.sources.get().amount_debited, Decimal("30.00"))
+        note = OrderNote.objects.get(order=order)
+        self.assertEqual(note.note_type, "Warning")
+        self.assertIn(
+            "Stripe charged 30.00 %s" % checkout.currency.upper(), note.message
+        )
+        self.assertIn("34.00", note.message)
+        self.assertEqual(
+            [m.to for m in mail.outbox if "review" in m.subject],
+            [["ops@example.com"]],
+        )
+
+    def test_matching_amount_has_no_review_note(self):
+        self.add(**self.auth)
+        self.start(auth=self.auth)
+        self.webhook("checkout.session.completed", paid_session())
+        self.assertFalse(OrderNote.objects.exists())
+        self.assertEqual(StripeCheckout.objects.get().amount_paid, Decimal("34.00"))
 
     def test_return_page(self):
         self.assertContains(
