@@ -3,7 +3,7 @@
 #   docker compose -f docker-compose.prod.yml build
 
 # --- Stage 1: build the django-oscar wheel (setup.py runs npm to build the assets)
-FROM python:3.12-slim AS builder
+FROM python:3.14-slim AS builder
 
 COPY --from=node:20-slim /usr/local/bin/node /usr/local/bin/node
 COPY --from=node:20-slim /usr/local/lib/node_modules /usr/local/lib/node_modules
@@ -19,7 +19,7 @@ COPY src ./src
 RUN pip wheel --no-deps --wheel-dir /wheels .
 
 # --- Stage 2: runtime
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
